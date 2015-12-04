@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">EverCalm Senses</string>
+    <string name="startupText">Welcome to EverCalm Senses</string>
 </resources>
