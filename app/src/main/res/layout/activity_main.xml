@@ -17,6 +17,7 @@
         android:layout_height="wrap_content"
         android:text="Start"
         android:id="@+id/button"
+        android:onClick="startBtnClick"
         android:layout_gravity="right|bottom" />
 
 
