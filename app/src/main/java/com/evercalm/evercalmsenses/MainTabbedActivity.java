@@ -103,6 +103,9 @@ public class MainTabbedActivity extends AppCompatActivity {
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
+            if(position == 1){
+                return TipsFragment.newInstance(2);
+            }
             return PlaceholderFragment.newInstance(position + 1);
         }
 
@@ -118,7 +121,7 @@ public class MainTabbedActivity extends AppCompatActivity {
                 case 0:
                     return "SECTION 1";
                 case 1:
-                    return "SECTION 2";
+                    return "TIPS";
             }
             return null;
         }
