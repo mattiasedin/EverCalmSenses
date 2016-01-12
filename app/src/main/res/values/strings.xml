@@ -4,6 +4,44 @@
     <string name="title_activity_main_tabbed">MainTabbedActivity</string>
     <string name="action_settings">Settings</string>
     <string name="section_format">Hello World from section: %1$d</string>
+    
+    
+    <string-array name="tips_categories">
+        <item>Stressfaktorer</item>
+        <item>Avstressning</item>
+        <item>Om systemet</item>
+    </string-array>
+
+    <string-array name="t1_items">
+        <item>
+            Visste du att sömn kan påverka stress?
+            För mycket sömn kan också vara påverka stressnivån.
+        </item>
+        <item>
+            Sitt inte framför datorn eller med mobiltelefonen
+            precis innan läggdags. Det tar längre tid att varva
+            ner och slappna av.
+        </item>
+    </string-array>
+
+    <string-array name="t2_items">
+        <item>
+            Sätt dig ner, blunda och ta tre djupa andetag.
+        </item>
+            Släpp tankarna från arbete.
+        <item>
+
+        </item>
+    </string-array>
+
+    <string-array name="t3_items">
+        <item>
+            Om du tappar anslutning mellan enheten och klockan,
+            kommer klockan gå in i Offline-läget och fortsätta
+            samla data i 36 timmar. All data synkroniseras när
+            anslutningen återupptas.
+        </item>
+    </string-array>
     <string name="title_activity_login">Sign in</string>
 
     <!-- Strings related to login -->
