@@ -50,8 +50,6 @@ public class TipsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main_tabbed_tips, container, false);
-        TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-        textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
 
         //ExpandableList test
         expandableListView = (ExpandableListView) rootView.findViewById(R.id.exp_listview);

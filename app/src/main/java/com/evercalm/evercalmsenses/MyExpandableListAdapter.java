@@ -99,6 +99,7 @@ public class MyExpandableListAdapter extends BaseExpandableListAdapter{
         return convertView;
     }
 
+    /*
     @Override
     public void onGroupExpanded(int groupPosition) {
 
@@ -108,7 +109,8 @@ public class MyExpandableListAdapter extends BaseExpandableListAdapter{
         }
         super.onGroupExpanded(groupPosition);
         lastExpandedGroupPosition = groupPosition;
-    }
+    }*/
+
 
     @Override
     public boolean isChildSelectable(int groupPosition, int childPosition) {
