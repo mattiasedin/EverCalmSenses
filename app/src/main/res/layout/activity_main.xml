@@ -15,9 +15,9 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Start"
+        android:text="Connect"
         android:id="@+id/button"
-        android:onClick="startBtnClick"
+        android:onClick="connectClick"
         android:layout_gravity="right|bottom" />
 
 
