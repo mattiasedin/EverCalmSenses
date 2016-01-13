@@ -8,14 +8,12 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
-import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
 import com.empatica.empalink.ConnectionNotAllowedException;
@@ -37,8 +35,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaStatusDelegate {
-
-    public static final String TAG = "EmpaticaServiceTag";
 
     private String logginID;
     private boolean isRunning = false;
@@ -82,19 +78,17 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         int RETRIEVE_DATA = 4;
         int RETRIEVE_LOGGING_STATUS = 5;
         int RETRIEVE_AUTH_STATUS = 6;
-        int START = 7;
+
         int REGISTER_CLIENT = 8;
         int UNREGISTER_CLIENT = 9;
-        int GET_DEVICE_STATUS = 10;
+
         int AUTHENTICATE_KEY = 11;
     }
 
     /** For showing and hiding our notification. */
     NotificationManager mNM;
     /** Keeps track of all current registered clients. */
-    ArrayList<Messenger> mClients = new ArrayList<Messenger>();
-    /** Holds last value set by a client. */
-    int mValue = 0;
+    ArrayList<Messenger> mClients = new ArrayList<>();
 
 
     public EmpaticaService() {
@@ -107,52 +101,42 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
             switch (msg.what) {
                 case MESSAGES.CONNECT_TO_DEVICE:
                     if (!connected) {
-                        sendMessageToClients(RESULTS.CONNECTION_PENDING);
+                        sendMsg(RESULTS.CONNECTION_PENDING);
                         tryConnect(600000);
                     } else {
-                        sendMessageToClients(RESULTS.CONNECTED);
+                        sendMsg(RESULTS.CONNECTED);
                         if (!isAuthenticated()) {
-                            sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
+                            sendMsg(RESULTS.NOT_AUTHENTICATED);
                         }
                     }
                     break;
                 case MESSAGES.RETRIEVE_DATA:
-                    if (connected) {
-                        if (isAuthenticated()) {
-                            sendMessageToClients(RESULTS.STRESS_DATA, currentStress.value);
-                        } else {
-                            sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
-                        }
-                    } else {
-                        sendMessageToClients(RESULTS.NOT_CONNECTED);
+                    if (doAuthenticationConditionalSend()) {
+                        sendMsg(RESULTS.STRESS_DATA, currentStress.value);
                     }
                     break;
                 case MESSAGES.START_LOGGING:
-                    try {
+                    if (doAuthenticationConditionalSend()) {
                         setLogging(true);
-                    } catch (UserNotLoggedInException e) {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.END_LOGGING:
-                    try {
+                    if (doAuthenticationConditionalSend()) {
                         setLogging(false);
-                    } catch (UserNotLoggedInException e) {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.RETRIEVE_LOGGING_STATUS:
-                    if (isLogging) {
-                        sendMessageToClients(RESULTS.IS_LOGGING);
-                    } else {
-                        sendMessageToClients(RESULTS.NOT_LOGGING);
+                    if (doAuthenticationConditionalSend()) {
+                        if (isLogging) {
+                            sendMsg(RESULTS.IS_LOGGING);
+                        } else {
+                            sendMsg(RESULTS.NOT_LOGGING);
+                        }
                     }
                     break;
                 case MESSAGES.RETRIEVE_AUTH_STATUS:
-                    if (isAuthenticated()) {
-                        sendMessageToClients(RESULTS.AUTHENTICATED);
-                    } else {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
+                    if (doAuthenticationConditionalSend()) {
+                        sendMsg(RESULTS.AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.REGISTER_CLIENT:
@@ -161,13 +145,10 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 case MESSAGES.UNREGISTER_CLIENT:
                     mClients.remove(msg.replyTo);
                     break;
-                case MESSAGES.GET_DEVICE_STATUS:
-                    sendMessageToClients(RESULTS.CONNECTED);
-                    break;
                 case MESSAGES.AUTHENTICATE_KEY:
                     String id = (String) msg.obj;
                     logginID = id;
-                    sendMessageToClients(RESULTS.AUTHENTICATED);
+                    sendMsg(RESULTS.AUTHENTICATED);
                     break;
                 case -1:
                     throw new UnsupportedOperationException();
@@ -200,6 +181,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         return isRunning;
     }
 
+
     @Override
     public void onDestroy() {
         Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
@@ -221,7 +203,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
 
-    public void sendMessageToClients(int message, double data) {
+    public void sendMsg(int message, double data) {
         for (int i=mClients.size()-1; i>=0; i--) {
             try {
                 mClients.get(i).send(Message.obtain(null,
@@ -232,7 +214,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         }
     }
 
-    public void sendMessageToClients(int message) {
+    public void sendMsg(int message) {
         for (int i=mClients.size()-1; i>=0; i--) {
             try {
                 mClients.get(i).send(Message.obtain(null,
@@ -241,6 +223,25 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 mClients.remove(i);
             }
         }
+    }
+
+    private boolean doConnectionConditionalSend() {
+        if (connected) {
+            return true;
+        }
+        sendMsg(RESULTS.NOT_CONNECTED);
+        return false;
+    }
+
+    private boolean doAuthenticationConditionalSend() {
+        if (doConnectionConditionalSend()) {
+            if (isAuthenticated()) {
+                return true;
+            } else {
+                sendMsg(RESULTS.NOT_AUTHENTICATED);
+            }
+        }
+        return false;
     }
 
     private void tryConnect(int timeout) {
@@ -255,40 +256,36 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 public void run() {
                     if (!connected) {
                         deviceManager.cleanUp();
-                        sendMessageToClients(RESULTS.CONNECTION_TIMEOUT);
+                        sendMsg(RESULTS.CONNECTION_TIMEOUT);
                     }
                 }
             }, timeout);
         }
     }
 
-    private void setLogging(boolean shouldLogg) throws UserNotLoggedInException {
-        if (isAuthenticated()) {
-            if (shouldLogg) {
-                if (!isLogging) {
-                    isLogging = true;
-                    Runnable loggingTask = new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                updateStress(getStress());
-                            } catch (NoDataCollectedException e) {
-                                //
-                            }
+    private void setLogging(boolean shouldLogg) {
+        if (shouldLogg) {
+            if (!isLogging) {
+                isLogging = true;
+                Runnable loggingTask = new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            updateStress(getStress());
+                        } catch (NoDataCollectedException e) {
+                            //
                         }
-                    };
+                    }
+                };
 
-                    ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-                    loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.MINUTES);
-                }
-            } else {
-                isLogging = false;
-                if (loggingScheduler != null) {
-                    loggingScheduler.cancel(false);
-                }
+                ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+                loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.MINUTES);
             }
         } else {
-            throw new UserNotLoggedInException();
+            isLogging = false;
+            if (loggingScheduler != null) {
+                loggingScheduler.cancel(false);
+            }
         }
 
     }
@@ -417,10 +414,10 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 // Connect to the device
                 deviceManager.connectDevice(bluetoothDevice);
                 connected = true;
-                sendMessageToClients(RESULTS.CONNECTED);
+                sendMsg(RESULTS.CONNECTED);
             } catch (ConnectionNotAllowedException e) {
                 // This should happen only if you try to connect when allowed == false.
-                sendMessageToClients(RESULTS.CONNECTION_FAILED);
+                sendMsg(RESULTS.CONNECTION_FAILED);
             }
         }
     }
