@@ -72,6 +72,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         int NOT_LOGGING = 7;
         int NOT_AUTHENTICATED = 8;
         int AUTHENTICATED = 9;
+        int STRESS_DATA = 10;
     }
 
     public interface MESSAGES {
@@ -116,10 +117,16 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                     }
                     break;
                 case MESSAGES.RETRIEVE_DATA:
-                    throw new UnsupportedOperationException();
-                    //sendMessageToClients(currentStress);
-                    //sendData(stress.get(stress.size()-1));
-                    //break;
+                    if (connected) {
+                        if (isAuthenticated()) {
+                            sendMessageToClients(RESULTS.STRESS_DATA, currentStress.value);
+                        } else {
+                            sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
+                        }
+                    } else {
+                        sendMessageToClients(RESULTS.NOT_CONNECTED);
+                    }
+                    break;
                 case MESSAGES.START_LOGGING:
                     try {
                         setLogging(true);
@@ -214,15 +221,23 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
 
+    public void sendMessageToClients(int message, double data) {
+        for (int i=mClients.size()-1; i>=0; i--) {
+            try {
+                mClients.get(i).send(Message.obtain(null,
+                        message, data));
+            } catch (RemoteException e) {
+                mClients.remove(i);
+            }
+        }
+    }
+
     public void sendMessageToClients(int message) {
         for (int i=mClients.size()-1; i>=0; i--) {
             try {
                 mClients.get(i).send(Message.obtain(null,
-                        message, mValue, 0));
+                        message));
             } catch (RemoteException e) {
-                // The client is dead.  Remove it from the list;
-                // we are going through the list from back to front
-                // so this is safe to do inside the loop.
                 mClients.remove(i);
             }
         }
@@ -313,6 +328,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
     private boolean checkIfSupportedInterval(final ValueBundle stress) {
         //TODO: check if last stress value is not from yesterday
+
         return true;
     }
 

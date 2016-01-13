@@ -57,6 +57,15 @@ public class SensesFragment extends Fragment {
                     mySwitch.setChecked(false);
                     mySwitch.setClickable(true);
                     break;
+                case EmpaticaService.RESULTS.NOT_AUTHENTICATED:
+                    startActivity(new Intent(getContext(), LoginActivity.class));
+                    break;
+                case EmpaticaService.RESULTS.NOT_CONNECTED:
+                    startActivity(new Intent(getContext(), MainActivity.class));
+                    break;
+                case EmpaticaService.RESULTS.STRESS_DATA:
+                    //TODO: change stress level visually.
+                    break;
                 default:
                     super.handleMessage(msg);
                     throw new UnsupportedOperationException();
@@ -65,7 +74,6 @@ public class SensesFragment extends Fragment {
     }
 
     ConnectActivity connectActivity;
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -107,6 +115,7 @@ public class SensesFragment extends Fragment {
             public void callbackPerformed() {
                 try {
                     connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
+                    connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_DATA);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
