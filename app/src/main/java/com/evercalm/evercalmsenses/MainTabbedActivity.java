@@ -105,7 +105,7 @@ public class MainTabbedActivity extends AppCompatActivity {
             // Return a PlaceholderFragment (defined as a static inner class below).
             switch (position) {
                 case 0:
-                    return MainTabbedActivitySensesFragment.newInstance();
+                    return SensesFragment.newInstance();
                 case 1:
                     return TipsFragment.newInstance(2);
                 default:

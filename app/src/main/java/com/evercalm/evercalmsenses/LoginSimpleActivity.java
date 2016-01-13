@@ -39,10 +39,12 @@ public class LoginSimpleActivity extends AppCompatActivity {
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                /*
                 int data = intent.getIntExtra(EmpaticaService.EMPATICA_MESSAGE, -1);
                 if (data != -1) {
                     textView.append("data: " + data + "\n");
                 }
+                */
 
             }
         };
@@ -80,7 +82,7 @@ public class LoginSimpleActivity extends AppCompatActivity {
         super.onStart();
 
         LocalBroadcastManager.getInstance(this).registerReceiver((receiver),
-                new IntentFilter(EmpaticaService.EMPATICA_RESULT_DATA)
+                new IntentFilter(EmpaticaService.EMPATICA_RESULT_DATA_URL)
         );
 
     }

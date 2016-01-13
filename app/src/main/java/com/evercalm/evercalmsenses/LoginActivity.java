@@ -99,8 +99,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                /*
                 String s = intent.getStringExtra(EmpaticaService.EMPATICA_MESSAGE);
-
+                */
 
             }
         };

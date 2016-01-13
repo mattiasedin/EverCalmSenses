@@ -1,10 +1,19 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.evercalm.evercalmsenses.MainTabbedActivitySensesFragment">
+    android:paddingLeft="@dimen/fragment_margin"
+    android:paddingRight="@dimen/fragment_margin"
+    android:paddingTop="@dimen/fragment_margin"
+    android:paddingBottom="@dimen/fragment_margin"
+    tools:context="com.evercalm.evercalmsenses.MainTabbedActivity$SensesFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView android:layout_width="match_parent" android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
 
-</FrameLayout>
+    <Switch
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Log stress level"
+        android:id="@+id/loggingSwitch"
+        android:layout_gravity="left|top"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true" />
+</RelativeLayout>
