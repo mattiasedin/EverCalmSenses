@@ -57,12 +57,6 @@ public class SensesFragment extends Fragment {
         }
     };
 
-    private void broadcastToEmpatica(int message) {
-        Intent intent = new Intent(getContext(), EmpaticaService.class);
-        intent.putExtra(EmpaticaService.EMPATICA_MESSAGE_URL, message);
-        //getContext().startService(intent);
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -80,9 +74,9 @@ public class SensesFragment extends Fragment {
             public void onCheckedChanged(CompoundButton buttonView,
                                          boolean isChecked) {
                 if (isChecked) {
-                    broadcastToEmpatica(EmpaticaService.MESSAGES.START_LOGGING);
+                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
                 } else {
-                    broadcastToEmpatica(EmpaticaService.MESSAGES.END_LOGGING);
+                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
                 }
 
             }
@@ -94,16 +88,11 @@ public class SensesFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        LocalBroadcastManager.getInstance(getContext()).registerReceiver((receiver),
-                new IntentFilter(EmpaticaService.EMPATICA_RESULT_URL)
-        );
 
-        broadcastToEmpatica(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
     }
 
     @Override
     public void onPause() {
-        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(receiver);
         super.onStop();
     }
 
