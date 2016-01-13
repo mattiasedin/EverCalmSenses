@@ -19,7 +19,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-public class MainActivity extends Activity  {
+public class MainActivity extends ConnectedActivity  {
     /*
     private static final int REQUEST_ENABLE_BT = 1;
     private static final long STREAMING_TIME = 10000; // Stops streaming 10 seconds after connection
@@ -37,12 +37,12 @@ public class MainActivity extends Activity  {
     private LocalBroadcastManager broadcaster;
     */
 
-    boolean isConnected = false;
+    //boolean isConnected = false;
 
     /** Messenger for communicating with service. */
-    Messenger mService = null;
+    //Messenger mService = null;
     /** Flag indicating whether we have called bind on the service. */
-    boolean mIsBound;
+    //boolean mIsBound;
     private ProgressDialog dialog;
     /** Some text view we are using to show state information. */
 
@@ -72,7 +72,7 @@ public class MainActivity extends Activity  {
                 case EmpaticaService.RESULTS.CONNECTION_TIMEOUT:
                     dialog.dismiss();
                     Toast.makeText(getApplicationContext(), "Connection timed out", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(MainActivity.this, MainTabbedActivity.class));
+                    startActivity(new Intent(MainActivity.this, LoginActivity.class));
                     break;
                 case EmpaticaService.RESULTS.NOT_AUTHENTICATED:
                     startActivity(new Intent(MainActivity.this, LoginActivity.class));
@@ -83,14 +83,6 @@ public class MainActivity extends Activity  {
                 default:
                     super.handleMessage(msg);
                     throw new UnsupportedOperationException();
-                    /*
-                case EmpaticaService.RESULTS.CONNECTED:
-                    dialog.dismiss();
-                    Toast.makeText(getApplicationContext(), "connected",
-                            Toast.LENGTH_SHORT).show();
-                default:
-                    super.handleMessage(msg);
-                    */
             }
         }
     }
@@ -99,12 +91,13 @@ public class MainActivity extends Activity  {
     /**
      * Target we publish for clients to send messages to IncomingHandler.
      */
-    final Messenger mMessenger = new Messenger(new IncomingHandler());
+    //final Messenger mMessenger = new Messenger(new IncomingHandler());
 
 
     /**
      * Class for interacting with the main interface of the service.
      */
+    /*
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
@@ -129,12 +122,14 @@ public class MainActivity extends Activity  {
                     Toast.LENGTH_SHORT).show();
         }
     };
-
+    */
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        setHandler(new IncomingHandler());
+        setContext(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        doBindService();
+
     }
 
     public void connectClick(View view)
@@ -151,14 +146,7 @@ public class MainActivity extends Activity  {
 
     }
 
-    void doBindService() {
-        // Establish a connection with the service.  We use an explicit
-        // class name because there is no reason to be able to let other
-        // applications replace our component.
-        bindService(new Intent(this,
-                EmpaticaService.class), mConnection, Context.BIND_AUTO_CREATE);
-        mIsBound = true;
-    }
+    /*
 
     private void sendMessageToService(int message, int value) throws RemoteException {
         Message msg = Message.obtain(null, message, this.hashCode(), value);
@@ -170,6 +158,15 @@ public class MainActivity extends Activity  {
         Message msg = Message.obtain(null, message);
         msg.replyTo = mMessenger;
         mService.send(msg);
+    }
+
+    void doBindService() {
+        // Establish a connection with the service.  We use an explicit
+        // class name because there is no reason to be able to let other
+        // applications replace our component.
+        bindService(new Intent(this,
+                EmpaticaService.class), mConnection, Context.BIND_AUTO_CREATE);
+        mIsBound = true;
     }
 
     void doUnbindService() {
@@ -190,130 +187,16 @@ public class MainActivity extends Activity  {
             mIsBound = false;
         }
     }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        doUnbindService();
-    }
-
-
-
-    /*
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        doBindService();
-
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                int resultMessage = intent.getIntExtra(EmpaticaService.EMPATICA_RESULT_URL, -1);
-                switch (resultMessage) {
-                    case EmpaticaService.RESULTS.NOT_CONNECTED:
-                        broadcastToEmpatica(EmpaticaService.MESSAGES.CONNECT_TO_DEVICE);
-                        break;
-                    case EmpaticaService.RESULTS.CONNECTION_PENDING:
-                        break;
-                    case EmpaticaService.RESULTS.CONNECTED:
-                        isConnected = true;
-                        dialog.setMessage("Checking authentication status");
-                        Intent i = new Intent(getApplicationContext(), EmpaticaService.class);
-                        i.putExtra(EmpaticaService.EMPATICA_MESSAGE_URL, EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
-                        mService.handleIntent(i);
-                        //broadcastToEmpatica(EmpaticaService.MESSAGES.RETRIEVE_AUTH_STATUS);
-
-
-                        break;
-                    case EmpaticaService.RESULTS.CONNECTION_TIMEOUT:
-                        dialog.dismiss();
-                        Toast.makeText(context, "Connection timed out", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(MainActivity.this, MainTabbedActivity.class));
-                        break;
-                    case EmpaticaService.RESULTS.NOT_AUTHENTICATED:
-                        startActivity(new Intent(MainActivity.this, LoginActivity.class));
-                        break;
-                    case EmpaticaService.RESULTS.AUTHENTICATED:
-                        startActivity(new Intent(MainActivity.this, MainTabbedActivity.class));
-                        break;
-                    default:
-                        throw new UnsupportedOperationException();
-                }
-            }
-        };
-
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(EmpaticaService.EMPATICA_RESULT_URL);
-        filter.addCategory(Intent.CATEGORY_DEFAULT);
-        registerReceiver(receiver, filter);
-
-        broadcaster = LocalBroadcastManager.getInstance(this);
-
-
-    }
-
-    private void broadcastToEmpatica(int message) {
-        Intent intent = new Intent(getApplicationContext(), EmpaticaService.class);
-        intent.putExtra(EmpaticaService.EMPATICA_MESSAGE_URL, message);
-        broadcaster.sendBroadcast(intent);
-    }
-
-    private void processStartService(final String tag) {
-        //Intent intent = new Intent(this, EmpaticaService.class);
-        //intent.putExtra(EmpaticaService.EMPATICA_MESSAGE_URL, EmpaticaService.MESSAGES.CONNECT_TO_DEVICE);
-        //startService(new Intent(this, EmpaticaService.class));
-        startService(new Intent(this, EmpaticaService.class));
-        bindService(new Intent(this, EmpaticaService.class), myConnection, BIND_AUTO_CREATE);
-
-    }
-
-    private IBinder myService;
-
-    public ServiceConnection myConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder binder) {
-            EmpaticaService.LocalBinder lbinder = (EmpaticaService.LocalBinder) binder;
-            mService = lbinder.getService();
-            mBound = true;
-        }
-        //binder comes from server to communicate with method's of
-
-        public void onServiceDisconnected(ComponentName className) {
-            mBound = false;
-        }
-    };
-
-
-    public void connectClick(View view)
-    {
-
-        dialog = ProgressDialog.show(MainActivity.this, "",
-                "Loading. Please wait...", true);
-
-        processStartService(EmpaticaService.TAG);
-
-    }
-
-
     @Override
     protected void onResume() {
         super.onResume();
-
-        //LocalBroadcastManager.getInstance(this).registerReceiver((receiver),
-        //        new IntentFilter(EmpaticaService.EMPATICA_RESULT_URL)
-        //);
-
+        doBindService();
     }
 
     @Override
     protected void onPause() {
+        doUnbindService();
         super.onPause();
-        if (mBound) {
-            //unbindService(myConnection);
-            mBound = false;
-        }
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
     }
     */
 }

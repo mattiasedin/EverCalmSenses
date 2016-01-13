@@ -12,6 +12,10 @@ public class StatisticsUser {
     @Expose
     private String email;
 
+    public StatisticsUser(String email) {
+        this.email = email;
+    }
+
     public String getEmail() {
         return email;
     }

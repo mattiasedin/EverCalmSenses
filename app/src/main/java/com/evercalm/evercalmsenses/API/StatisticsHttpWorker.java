@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import retrofit.Call;
 import retrofit.GsonConverterFactory;
+import retrofit.Response;
 import retrofit.Retrofit;
 
 /**
@@ -58,7 +59,7 @@ public class StatisticsHttpWorker extends AsyncTask<Void, Void,
                 throw new UnsupportedOperationException();
                 //call = endpoint.updateData(id, new StatisticsModel(model.getId(), model.getData(), 0));
             case POST:
-                call = endpoint.createDataPost(new StatisticsModel(null, model.getValue(), model.getTimestamp(), 0));
+                call = endpoint.createDataPost(new StatisticsModel(null, model.getData(), model.getTimestamp()));
                 break;
             case DELETE:
                 throw new UnsupportedOperationException();
@@ -66,13 +67,18 @@ public class StatisticsHttpWorker extends AsyncTask<Void, Void,
                 call = null;
                 break;
         }
-
         try {
-            StatisticsModel response = call.execute().body();
-            return response;
-        } catch (IOException e) {
-            return null;
+            try {
+                Response<StatisticsModel> response = call.execute();
+                StatisticsModel body = response.body();
+                return body;
+            } catch (IOException e) {
+                int a = 3;
+            }
+        } catch (Exception e) {
+            int b = 2;
         }
+        return null;
     }
 
     @Override

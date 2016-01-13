@@ -5,6 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.RemoteException;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.LayoutInflater;
@@ -34,15 +37,18 @@ public class SensesFragment extends Fragment {
         return fragment;
     }
 
-    public SensesFragment() {
+    private class ConnectActivity extends ConnectedActivity {
+
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+        }
     }
 
-
-    BroadcastReceiver receiver = new BroadcastReceiver() {
+    private class IncomingHandler extends Handler {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            int resultMessage = intent.getIntExtra(EmpaticaService.EMPATICA_RESULT_URL, -1);
-            switch (resultMessage) {
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
                 case EmpaticaService.RESULTS.IS_LOGGING:
                     mySwitch.setChecked(true);
                     mySwitch.setClickable(true);
@@ -52,10 +58,14 @@ public class SensesFragment extends Fragment {
                     mySwitch.setClickable(true);
                     break;
                 default:
+                    super.handleMessage(msg);
                     throw new UnsupportedOperationException();
             }
         }
-    };
+    }
+
+    ConnectActivity connectActivity;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -74,11 +84,32 @@ public class SensesFragment extends Fragment {
             public void onCheckedChanged(CompoundButton buttonView,
                                          boolean isChecked) {
                 if (isChecked) {
-                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
+                    try {
+                        connectActivity.sendMessageToService(EmpaticaService.MESSAGES.START_LOGGING);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
                 } else {
-                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
+                    try {
+                        connectActivity.sendMessageToService(EmpaticaService.MESSAGES.END_LOGGING);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
                 }
 
+            }
+        });
+        connectActivity = new ConnectActivity();
+        connectActivity.setHandler(new IncomingHandler());
+        connectActivity.setContext(rootView.getContext());
+        connectActivity.setConnectionCallback(new ConnectionActivityCallbackListener() {
+            @Override
+            public void callbackPerformed() {
+                try {
+                    connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -88,12 +119,27 @@ public class SensesFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
+        connectActivity.doBindService();
+        /*
+        try {
+            connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        */
     }
 
     @Override
     public void onPause() {
+        connectActivity.doUnbindService();
         super.onStop();
+
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
     }
 
 }
