@@ -114,7 +114,7 @@ public class LoginActivity extends ConnectedActivity implements LoaderCallbacks<
         setHandler(new IncomingHandler());
         setContext(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        setContentView(R.layout.activity_login2);
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
