@@ -25,6 +25,7 @@ import com.empatica.empalink.delegate.EmpaDataDelegate;
 import com.empatica.empalink.delegate.EmpaStatusDelegate;
 import com.evercalm.evercalmsenses.API.EverCalmStatisticsEndpoint;
 import com.evercalm.evercalmsenses.API.StatisticsHttpWorker;
+import com.evercalm.evercalmsenses.API.StatisticsIdentification;
 import com.evercalm.evercalmsenses.API.StatisticsModel;
 import com.evercalm.evercalmsenses.API.WorkerEventListener;
 
@@ -37,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaStatusDelegate {
 
     private String logginID;
-    private boolean isRunning = false;
 
     private static final String EMPATICA_API_KEY = "74da5531eacb41bb819a7643cfe88d06";
     private EmpaDeviceManager deviceManager;
@@ -47,8 +47,12 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     ScheduledFuture<?> loggingScheduler;
 
     //DATA
-    ValueBundle currentStress;
-    ArrayList<ValueBundle> ibis_raw;
+    private ValueBundle accumulatedStress;
+    private ValueBundle currentStress;
+    private ArrayList<ValueBundle> ibis_raw;
+    private final double STRESS_THRESHOLD = 0.8;
+
+
     private boolean isLogging;
 
 
@@ -114,7 +118,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 case MESSAGES.RETRIEVE_DATA:
                     if (doAuthenticationConditionalSend()) {
                         if (currentStress != null) {
-                            sendMsg(RESULTS.STRESS_DATA, currentStress.value);
+                            sendMsg(RESULTS.STRESS_DATA, accumulatedStress.value);
                         }
 
                     }
@@ -153,6 +157,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                     String id = (String) msg.obj;
                     logginID = id;
                     sendMsg(RESULTS.AUTHENTICATED);
+                    onAuthentication();
                     break;
                 case -1:
                     throw new UnsupportedOperationException();
@@ -176,15 +181,27 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         startForeground(NOTIFICATION_ID, notification);
     }
 
-    public boolean isRunning() {
-        return isRunning;
-
-    }
-
-
     @Override
     public void onDestroy() {
         //Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
+    }
+
+
+    public void onAuthentication() {
+        WorkerEventListener ev = new WorkerEventListener() {
+            StatisticsIdentification model = new StatisticsIdentification(logginID);
+            @Override
+            public void dataRecieved(StatisticsModel model) {
+                if (model != null) {
+                    accumulatedStress = new ValueBundle(model.getData(), model.getTimestamp());
+                    sendMsg(RESULTS.STRESS_DATA, accumulatedStress.value);
+                } else {
+                    sendMsg(RESULTS.NOT_AUTHENTICATED);
+                }
+            }
+        };
+        StatisticsHttpWorker task = new StatisticsHttpWorker(EverCalmStatisticsEndpoint.API_URL, ev, logginID);
+        task.execute();
     }
 
     private final IBinder mBinder = new LocalBinder();
@@ -272,7 +289,9 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                     @Override
                     public void run() {
                         try {
-                            updateStress(getStress());
+                            if (accumulatedStress != null) {
+                                updateStress(getStress());
+                            }
                         } catch (NoDataCollectedException e) {
                             //
                         }
@@ -300,28 +319,30 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
     private void setStress(ValueBundle v) {
+        accumulatedStress.value += v.value - STRESS_THRESHOLD;
+        accumulatedStress.timestamp = v.timestamp;
         currentStress = v;
-        //TODO: notify application of new value.
+        sendMsg(RESULTS.STRESS_DATA, accumulatedStress.value);
     }
 
     private void updateStress(ValueBundle stress) {
         if (isAuthenticated()) {
-            if (currentStress != null) {
-                if (checkIfSupportedInterval(stress)) {
-                    StatisticsModel model = new StatisticsModel(logginID, stress.value, stress.timestamp);
+            setStress(stress);
+            if (checkIfSupportedInterval(stress)) {
+                StatisticsModel model = new StatisticsModel(logginID, accumulatedStress.value, stress.timestamp);
 
-                    WorkerEventListener ev = new WorkerEventListener() {
-                        @Override
-                        public void dataRecieved(StatisticsModel model) {
-                            System.out.println(model);
-                        }
-                    };
+                WorkerEventListener ev = new WorkerEventListener() {
+                    @Override
+                    public void dataRecieved(StatisticsModel model) {
+                        System.out.println(model);
+                    }
+                };
 
-                    StatisticsHttpWorker task = new StatisticsHttpWorker(EverCalmStatisticsEndpoint.API_URL, ev, model, StatisticsHttpWorker.SETTINGS.POST);
-                    task.execute();
-                }
+                StatisticsHttpWorker task = new StatisticsHttpWorker(EverCalmStatisticsEndpoint.API_URL, ev, model, StatisticsHttpWorker.SETTINGS.POST);
+                task.execute();
             }
-            currentStress = stress;
+        } else {
+            //TODO: notify user that the connection to server has been lost.
         }
     }
 

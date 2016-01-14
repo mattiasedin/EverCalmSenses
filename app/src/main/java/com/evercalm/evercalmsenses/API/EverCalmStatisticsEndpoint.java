@@ -16,7 +16,7 @@ public interface EverCalmStatisticsEndpoint {
 
     String API_URL = "http://130.239.239.0:9000"; //"http://evercalm-statistics.herokuapp.com";
 
-    @GET("/api/sensedata/{id}")
+    @GET("/api/sensedata/{id}/latest")
     Call<StatisticsModel> getData(@Path("id") String id);
 
     /*
