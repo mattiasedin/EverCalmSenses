@@ -51,7 +51,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     private ValueBundle accumulatedStress;
     private ValueBundle currentStress;
     private ArrayList<ValueBundle> ibis_raw;
-    private final double STRESS_THRESHOLD = 0.8;
+    private final double STRESS_THRESHOLD = 0.83;
 
 
     private boolean isLogging;
@@ -60,7 +60,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     static final public String EMPATICA_RESULT_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_RESULT";
     static final public String EMPATICA_RESULT_DATA_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_RESULT";
     static final public String EMPATICA_MESSAGE_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_MESSAGE";
-    private static final long LOGGING_INTERVAL_MINUTES = 1;
+    private static final long LOGGING_INTERVAL_MINUTES = 10;
     private Context context;
 
     public interface RESULTS {
@@ -196,6 +196,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
             @Override
             public void dataRecieved(StatisticsModel model) {
                 if (model != null) {
+                    System.out.println(model);
                     accumulatedStress = new ValueBundle(model.getData(), model.getTimestamp());
                     sendMsg(RESULTS.STRESS_DATA, accumulatedStress.value);
                 } else {
@@ -302,7 +303,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 };
 
                 ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-                loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.MINUTES);
+                loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.SECONDS);
             }
         } else {
             isLogging = false;
@@ -488,7 +489,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         ArrayList<ValueBundle> selected_ibis = popIbis();
 
         //TODO: check the timestamp interval, only use data from specified time
-
+        System.out.println("nr of datapoints: "+selected_ibis.size());
         if(selected_ibis.size() <= 1) {
             throw new NoDataCollectedException();
         }

@@ -79,7 +79,6 @@ public class MainTabbedActivity extends AppCompatActivity {
         }
         if (id == R.id.action_exit) {
             stopService(new Intent(getApplicationContext(), EmpaticaService.class));
-            this.finish();
             System.exit(0);
             return true;
         }

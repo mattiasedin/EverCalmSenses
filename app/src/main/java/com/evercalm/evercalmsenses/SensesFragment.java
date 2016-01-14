@@ -85,7 +85,8 @@ public class SensesFragment extends Fragment {
                     break;
                 case EmpaticaService.RESULTS.STRESS_DATA:
                     Double stressData = (double) msg.obj;
-                    updateStressLevel(stressData.floatValue());
+                    setStressLevel(stressData.floatValue());
+                    //updateStressLevel(stressData.floatValue());
                     break;
                 default:
                     super.handleMessage(msg);
@@ -113,14 +114,14 @@ public class SensesFragment extends Fragment {
             public void onCheckedChanged(CompoundButton buttonView,
                                          boolean isChecked) {
                 if (isChecked) {
-                    setStressLevel(1);
+                    //setStressLevel(1);
                     try {
                         connectActivity.sendMessageToService(EmpaticaService.MESSAGES.START_LOGGING);
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    setStressLevel((float)2.9);
+                    //setStressLevel((float)2.9);
                     try {
                         connectActivity.sendMessageToService(EmpaticaService.MESSAGES.END_LOGGING);
                     } catch (RemoteException e) {
@@ -145,7 +146,7 @@ public class SensesFragment extends Fragment {
             }
         });
 
-        initStressLevel();
+        //initStressLevel();
 
         return rootView;
     }
@@ -172,7 +173,7 @@ public class SensesFragment extends Fragment {
         // Check value not out of bounds
         if(scaledValue <  MAX_VALUE){
             ImageView vectorImage = (ImageView) rootView.findViewById(R.id.vector_image_content);
-            ViewPropertyAnimator animator = vectorImage.animate().translationY(-scaledValue);
+            ViewPropertyAnimator animator = vectorImage.animate().setDuration(9000).translationY(-scaledValue);
 
             if((scaledValue > HIGH_THRESHOLD) && (passedTheshold == false)){
 
