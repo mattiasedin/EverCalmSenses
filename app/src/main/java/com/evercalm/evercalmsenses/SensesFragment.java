@@ -1,23 +1,17 @@
 package com.evercalm.evercalmsenses;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.animation.AnimatorInflater;
+import android.animation.ArgbEvaluator;
+import android.animation.ObjectAnimator;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Animatable;
-import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.VectorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.RemoteException;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,19 +20,24 @@ import android.view.ViewPropertyAnimator;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
-import android.widget.Toast;
 
-import java.util.Vector;
 
 
 public class SensesFragment extends Fragment {
 
     private static final String ARG_SECTION_NUMBER = "section_number";
+    /*
+    private final float MAX_VALUE = 0;
+    private final float MIN_VALUE = -900;
+    private final float MID_THRESHOLD = -600;
+    private final float HIGH_THRESHOLD = -300;
+    */
     private final float MAX_VALUE = 0;
     private final float MIN_VALUE = -900;
     private final float MID_THRESHOLD = -600;
     private final float HIGH_THRESHOLD = -300;
     private final int MULTIPLIER = 300;
+    private boolean passedTheshold = false;
 
     private Switch mySwitch;
     private View rootView;
@@ -114,12 +113,14 @@ public class SensesFragment extends Fragment {
             public void onCheckedChanged(CompoundButton buttonView,
                                          boolean isChecked) {
                 if (isChecked) {
+                    setStressLevel(1);
                     try {
                         connectActivity.sendMessageToService(EmpaticaService.MESSAGES.START_LOGGING);
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
                 } else {
+                    setStressLevel((float)2.9);
                     try {
                         connectActivity.sendMessageToService(EmpaticaService.MESSAGES.END_LOGGING);
                     } catch (RemoteException e) {
@@ -163,25 +164,37 @@ public class SensesFragment extends Fragment {
 
     /**
      * Update visual stress level
-     * @param change the change in stress (+/-)
+     * @param value the Ackumulated stress level
      */
     public void setStressLevel(float value){
-        float scaledValue = value * MULTIPLIER;
-        float newValue = currentValue + scaledValue;
+        float scaledValue = MIN_VALUE + (value * MULTIPLIER);
 
         // Check value not out of bounds
-        if((newValue <=  MAX_VALUE) && (newValue >= MIN_VALUE)){
+        if(scaledValue <  MAX_VALUE){
             ImageView vectorImage = (ImageView) rootView.findViewById(R.id.vector_image_content);
-            ViewPropertyAnimator animator = vectorImage.animate().translationYBy(-scaledValue);
+            ViewPropertyAnimator animator = vectorImage.animate().translationY(-scaledValue);
 
-            currentValue = newValue;
+            if((scaledValue > HIGH_THRESHOLD) && (passedTheshold == false)){
 
-            if(currentValue > HIGH_THRESHOLD){
-                vectorImage.setBackgroundColor(Color.RED);
-            }else if(currentValue > MID_THRESHOLD){
-                vectorImage.setBackgroundColor(Color.YELLOW);
-            }else {
-                vectorImage.setBackgroundColor(Color.GREEN);
+                //VectorDrawable drawable = (VectorDrawable) vectorImage.getDrawable();
+                /*ObjectAnimator colorAnimator = (ObjectAnimator) AnimatorInflater.loadAnimator(getActivity(), R.anim.change_color);
+                colorAnimator.setPropertyName("green_to_red_animation");
+                colorAnimator.setEvaluator(new ArgbEvaluator());
+                colorAnimator.start();
+                //ObjectAnimator.ofFloat(vectorImage, "green_to_red_animation",0f,1f).start();
+                ObjectAnimator.ofObject(vectorImage, "green_to_red_animation", new ArgbEvaluator(), Color.RED, Color.GREEN);
+                passedTheshold = true;
+                System.out.println("true");
+                */
+
+            }else{
+                //VectorDrawable drawable = (VectorDrawable) vectorImage.getDrawable();
+                //ObjectAnimator.ofFloat(vectorImage, "red_to_green_animation", 0f, 1f).start();
+                /*
+                ObjectAnimator.ofObject(vectorImage, "green_to_red_animation", new ArgbEvaluator(), Color.GREEN, Color.RED);
+                passedTheshold = false;
+                System.out.println("false");
+                */
             }
         }
     }

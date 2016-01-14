@@ -5,6 +5,7 @@
     android:viewportHeight="387.14301">
 
     <group
+            android:name="content"
             android:translateY="-665.21916">
         <path
             android:fillColor="@color/web_border"
