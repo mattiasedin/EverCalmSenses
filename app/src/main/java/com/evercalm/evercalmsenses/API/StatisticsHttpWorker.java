@@ -59,7 +59,7 @@ public class StatisticsHttpWorker extends AsyncTask<Void, Void,
                 throw new UnsupportedOperationException();
                 //call = endpoint.updateData(id, new StatisticsModel(model.getId(), model.getData(), 0));
             case POST:
-                call = endpoint.createDataPost(new StatisticsModel(null, model.getData(), model.getTimestamp()));
+                call = endpoint.createDataPost(new StatisticsModel(model.getUserId(), model.getData(), model.getTimestamp()));
                 break;
             case DELETE:
                 throw new UnsupportedOperationException();

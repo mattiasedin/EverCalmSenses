@@ -26,6 +26,11 @@ public class StatisticsModel {
         this.timestamp = timestamp;
     }
 
+    @Override
+    public String toString() {
+        return "userID: "+userId+" data: "+data+" timestamp: "+timestamp;
+    }
+
     public String getUserId() {
         return userId;
     }

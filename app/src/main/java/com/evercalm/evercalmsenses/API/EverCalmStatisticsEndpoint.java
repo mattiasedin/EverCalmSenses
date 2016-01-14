@@ -28,9 +28,6 @@ public interface EverCalmStatisticsEndpoint {
     Call<StatisticsModel> createDataPost(@Body StatisticsModel data);
 
     @POST("/api/login")
-    Call<StatisticsUser> login(@Body StatisticsUser data);
-
-    @POST("/api/login")
     Call<StatisticsIdentification> getLoginIdentification(@Body StatisticsUser data);
 
 }

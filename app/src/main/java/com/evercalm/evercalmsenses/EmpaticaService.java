@@ -2,6 +2,7 @@ package com.evercalm.evercalmsenses;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -14,7 +15,6 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
-import android.widget.Toast;
 
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
@@ -87,6 +87,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
     /** For showing and hiding our notification. */
     NotificationManager mNM;
+    private final int NOTIFICATION_ID = 1;
     /** Keeps track of all current registered clients. */
     ArrayList<Messenger> mClients = new ArrayList<>();
 
@@ -112,7 +113,10 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                     break;
                 case MESSAGES.RETRIEVE_DATA:
                     if (doAuthenticationConditionalSend()) {
-                        sendMsg(RESULTS.STRESS_DATA, currentStress.value);
+                        if (currentStress != null) {
+                            sendMsg(RESULTS.STRESS_DATA, currentStress.value);
+                        }
+
                     }
                     break;
                 case MESSAGES.START_LOGGING:
@@ -161,30 +165,26 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
     final Messenger mMessenger = new Messenger(new IncomingHandler());
 
-
     @Override
     public void onCreate() {
         super.onCreate();
         context = getApplicationContext();
-        // This method is invoked when the service is called.
-        Toast.makeText(this, "Service was Created", Toast.LENGTH_LONG).show();
-        //broadcaster = LocalBroadcastManager.getInstance(this);
-        //context = this.getApplicationContext();
-
         mNM = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 
         // Display a notification about us starting.
-        startForeground(001, getNotification());
+        Notification notification = getNotification(getResources().getString(R.string.service_not_logging));
+        startForeground(NOTIFICATION_ID, notification);
     }
 
     public boolean isRunning() {
         return isRunning;
+
     }
 
 
     @Override
     public void onDestroy() {
-        Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
     }
 
     private final IBinder mBinder = new LocalBinder();
@@ -266,6 +266,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     private void setLogging(boolean shouldLogg) {
         if (shouldLogg) {
             if (!isLogging) {
+                mNM.notify(NOTIFICATION_ID, getNotification(getResources().getString(R.string.service_is_logging)));
                 isLogging = true;
                 Runnable loggingTask = new Runnable() {
                     @Override
@@ -283,6 +284,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
             }
         } else {
             isLogging = false;
+            mNM.notify(NOTIFICATION_ID, getNotification(getResources().getString(R.string.service_not_logging)));
             if (loggingScheduler != null) {
                 loggingScheduler.cancel(false);
             }
@@ -336,17 +338,18 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         return START_STICKY; // or whatever your flag
     }
 
-    private Notification getNotification() {
-        // In this sample, we'll use the same text for the ticker and the expanded notification
-        CharSequence text = "Service is running";
+    private Notification getNotification(String text) {
+
+        Intent intent = new Intent(this, MainTabbedActivity.class);
+        PendingIntent pIntent = PendingIntent.getActivity(this, 0, intent, 0);
 
         // Set the info for the views that show in the notification panel.
         Notification notification = new Notification.Builder(this)
                 .setSmallIcon(R.drawable.notification_small)  // the status icon
                 .setTicker(text)  // the status text
-                .setWhen(System.currentTimeMillis())  // the time stamp
                 .setContentTitle("Empatica Senses")  // the label of the entry
                 .setContentText(text)  // the contents of the entry
+                .setContentIntent(pIntent)
                 .build();
 
         // Send the notification.

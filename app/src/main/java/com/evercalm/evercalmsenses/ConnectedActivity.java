@@ -5,15 +5,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.widget.Toast;
-
-import java.util.EventListener;
 
 /**
  * Created by mattias on 2016-01-13.
@@ -42,18 +38,12 @@ public abstract class ConnectedActivity extends Activity {
             if (ev != null) {
                 ev.callbackPerformed();
             }
-            Toast.makeText(context, "Connected",
-                    Toast.LENGTH_SHORT).show();
         }
 
         public void onServiceDisconnected(ComponentName className) {
             // This is called when the connection with the service has been
             // unexpectedly disconnected -- that is, its process crashed.
             mService = null;
-
-            // As part of the sample, tell the user what happened.
-            Toast.makeText(context, "Disconnected",
-                    Toast.LENGTH_SHORT).show();
         }
     };
 
