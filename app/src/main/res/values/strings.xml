@@ -4,6 +4,8 @@
     <string name="title_activity_main_tabbed">MainTabbedActivity</string>
     <string name="action_settings">Settings</string>
     <string name="section_format">Hello World from section: %1$d</string>
+    <string name="service_not_logging">Connected to device, not logging.</string>
+    <string name="service_is_logging">Connected to device, logging data.</string>
     
     
     <string-array name="tips_categories">

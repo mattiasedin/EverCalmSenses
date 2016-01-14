@@ -12,9 +12,28 @@ public class StatisticsIdentification {
     @Expose
     private String id;
 
+    /**
+     *
+     * @param id
+     */
+    public StatisticsIdentification(String id) {
+        this.id = id;
+    }
+
+    /**
+     *
+     * @return
+     * The id
+     */
     public String getId() {
         return id;
     }
+
+    /**
+     *
+     * @param id
+     * The id
+     */
     public void setId(String id) {
         this.id = id;
     }

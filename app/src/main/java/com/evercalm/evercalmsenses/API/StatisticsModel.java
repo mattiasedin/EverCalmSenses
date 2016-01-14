@@ -8,99 +8,36 @@ import com.google.gson.annotations.SerializedName;
  */
 public class StatisticsModel {
 
-    @SerializedName("_id")
+    @SerializedName("data")
     @Expose
-    private String Id;
+    private double data;
 
-    @SerializedName("value")
+    @SerializedName("userId")
     @Expose
-    private String value;
+    private String userId;
 
     @SerializedName("timestamp")
     @Expose
-    private String timestamp;
+    private double timestamp;
 
-    @SerializedName("__v")
-    @Expose
-    private Integer V;
-
-    public StatisticsModel(String id, String value, String timestamp, Integer v ) {
-        this.Id = id;
-        this.value = value;
+    public StatisticsModel(String userId, double data, double timestamp) {
+        this.userId = userId;
+        this.data = data;
         this.timestamp = timestamp;
-        this.V = v;
     }
 
-
-    /**
-     *
-     * @return
-     * The Id
-     */
-    public String getId() {
-        return Id;
+    @Override
+    public String toString() {
+        return "userID: "+userId+" data: "+data+" timestamp: "+timestamp;
     }
 
-    /**
-     *
-     * @param Id
-     * The _id
-     */
-    public void setId(String Id) {
-        this.Id = Id;
+    public String getUserId() {
+        return userId;
     }
-
-    /**
-     *
-     * @return
-     * The value
-     */
-    public String getValue() {
-        return value;
+    public double getData() {
+        return data;
     }
-
-    /**
-     *
-     * @param data
-     * The value
-     */
-    public void setValue(String data) {
-        this.value = data;
-    }
-
-    /**
-     *
-     * @return
-     * The timestamp
-     */
-    public String getTimestamp() {
+    public  double getTimestamp() {
         return timestamp;
-    }
-
-    /**
-     *
-     * @param timestamp
-     * The timestamp
-     */
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    /**
-     *
-     * @return
-     * The V
-     */
-    public Integer getV() {
-        return V;
-    }
-
-    /**
-     *
-     * @param V
-     * The __v
-     */
-    public void setV(Integer V) {
-        this.V = V;
     }
 }

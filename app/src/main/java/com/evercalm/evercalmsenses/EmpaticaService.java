@@ -14,11 +14,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.security.keystore.UserNotAuthenticatedException;
 import android.support.annotation.Nullable;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.app.NotificationCompat;
-import android.widget.Toast;
 
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
@@ -27,6 +23,10 @@ import com.empatica.empalink.config.EmpaSensorType;
 import com.empatica.empalink.config.EmpaStatus;
 import com.empatica.empalink.delegate.EmpaDataDelegate;
 import com.empatica.empalink.delegate.EmpaStatusDelegate;
+import com.evercalm.evercalmsenses.API.EverCalmStatisticsEndpoint;
+import com.evercalm.evercalmsenses.API.StatisticsHttpWorker;
+import com.evercalm.evercalmsenses.API.StatisticsModel;
+import com.evercalm.evercalmsenses.API.WorkerEventListener;
 
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
@@ -36,17 +36,27 @@ import java.util.concurrent.TimeUnit;
 
 public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaStatusDelegate {
 
-    public static final String TAG = "EmpaticaServiceTag";
-    private static final String API_URL =  "http://evercalm-statistics.herokuapp.com"; //"https://mattias-innovativa-lab1.herokuapp.com"; //TODO: add url
-
-    private int logginID = 0;
+    private String logginID;
     private boolean isRunning = false;
+
+    private static final String EMPATICA_API_KEY = "74da5531eacb41bb819a7643cfe88d06";
+    private EmpaDeviceManager deviceManager;
+
+    private boolean connected = false;
+
+    ScheduledFuture<?> loggingScheduler;
+
+    //DATA
+    ValueBundle currentStress;
+    ArrayList<ValueBundle> ibis_raw;
+    private boolean isLogging;
 
 
     static final public String EMPATICA_RESULT_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_RESULT";
     static final public String EMPATICA_RESULT_DATA_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_RESULT";
     static final public String EMPATICA_MESSAGE_URL = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_MESSAGE";
     private static final long LOGGING_INTERVAL_MINUTES = 1;
+    private Context context;
 
     public interface RESULTS {
         int CONNECTED = 1;
@@ -58,6 +68,7 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         int NOT_LOGGING = 7;
         int NOT_AUTHENTICATED = 8;
         int AUTHENTICATED = 9;
+        int STRESS_DATA = 10;
     }
 
     public interface MESSAGES {
@@ -67,111 +78,69 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         int RETRIEVE_DATA = 4;
         int RETRIEVE_LOGGING_STATUS = 5;
         int RETRIEVE_AUTH_STATUS = 6;
-        int START = 7;
+
         int REGISTER_CLIENT = 8;
         int UNREGISTER_CLIENT = 9;
-        int GET_DEVICE_STATUS = 10;
+
+        int AUTHENTICATE_KEY = 11;
     }
-
-    private static final String EMPATICA_API_KEY = "8a2036983aa448a9ac624064d72248c8";
-    private static final int REQUEST_ENABLE_BT = 1;
-    private LocalBroadcastManager broadcaster;
-    private EmpaDeviceManager deviceManager;
-
-    private boolean connected = false;
-    private Context context;
-
-    ScheduledFuture<?> loggingScheduler;
-
-    //DATA
-    ValueBundle currentStress;
-    ArrayList<ValueBundle> ibis_raw;
-    private boolean isLogging;
-
-
-    static final public String SERVICE_MSG_TAG = "com.evercalm.evercalmsenses.EmpaticaService.EMPATICA_MESSAGE";
 
     /** For showing and hiding our notification. */
     NotificationManager mNM;
+    private final int NOTIFICATION_ID = 1;
     /** Keeps track of all current registered clients. */
-    ArrayList<Messenger> mClients = new ArrayList<Messenger>();
-    /** Holds last value set by a client. */
-    int mValue = 0;
+    ArrayList<Messenger> mClients = new ArrayList<>();
 
 
     public EmpaticaService() {
         ibis_raw = new ArrayList<>(100);
     }
 
-    /*
-    public void sendResult(int message) {
-        Intent intent = new Intent(EMPATICA_RESULT_URL);
-        intent.putExtra(EMPATICA_RESULT_URL, message);
-        broadcaster.sendBroadcast(intent);
-    }
-
-    public void sendData(ValueBundle val) {
-        Intent intent = new Intent(EMPATICA_RESULT_DATA_URL);
-        intent.putExtra(EMPATICA_RESULT_DATA_URL, val.value);
-        broadcaster.sendBroadcast(intent);
-    }
-    */
-
     class IncomingHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case MESSAGES.START:
-                    if (deviceManager == null) {
-                        sendMessageToClients(RESULTS.NOT_CONNECTED);
-                    } else if (logginID != 0) {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
-                    } else {
-                        sendMessageToClients(RESULTS.AUTHENTICATED);
-                    }
-                    break;
                 case MESSAGES.CONNECT_TO_DEVICE:
                     if (!connected) {
-                        sendMessageToClients(RESULTS.CONNECTION_PENDING);
-                        tryConnect(5000);
+                        sendMsg(RESULTS.CONNECTION_PENDING);
+                        tryConnect(600000);
                     } else {
-                        sendMessageToClients(RESULTS.CONNECTED);
-                        if (logginID != 0) {
-                            sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
+                        sendMsg(RESULTS.CONNECTED);
+                        if (!isAuthenticated()) {
+                            sendMsg(RESULTS.NOT_AUTHENTICATED);
                         }
                     }
                     break;
                 case MESSAGES.RETRIEVE_DATA:
-                    throw new UnsupportedOperationException();
-                    //sendMessageToClients(currentStress);
-                    //sendData(stress.get(stress.size()-1));
-                    //break;
+                    if (doAuthenticationConditionalSend()) {
+                        if (currentStress != null) {
+                            sendMsg(RESULTS.STRESS_DATA, currentStress.value);
+                        }
+
+                    }
+                    break;
                 case MESSAGES.START_LOGGING:
-                    try {
+                    if (doAuthenticationConditionalSend()) {
                         setLogging(true);
-                    } catch (UserNotLoggedInException e) {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.END_LOGGING:
-                    try {
+                    if (doAuthenticationConditionalSend()) {
                         setLogging(false);
-                    } catch (UserNotLoggedInException e) {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.RETRIEVE_LOGGING_STATUS:
-                    if (isLogging) {
-                        sendMessageToClients(RESULTS.IS_LOGGING);
-                    } else {
-                        sendMessageToClients(RESULTS.NOT_LOGGING);
+                    if (doAuthenticationConditionalSend()) {
+                        if (isLogging) {
+                            sendMsg(RESULTS.IS_LOGGING);
+                        } else {
+                            sendMsg(RESULTS.NOT_LOGGING);
+                        }
                     }
                     break;
                 case MESSAGES.RETRIEVE_AUTH_STATUS:
-                    if (logginID != 0) {
-                        sendMessageToClients(RESULTS.AUTHENTICATED);
-                    } else {
-                        sendMessageToClients(RESULTS.NOT_AUTHENTICATED);
+                    if (doAuthenticationConditionalSend()) {
+                        sendMsg(RESULTS.AUTHENTICATED);
                     }
                     break;
                 case MESSAGES.REGISTER_CLIENT:
@@ -180,8 +149,10 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 case MESSAGES.UNREGISTER_CLIENT:
                     mClients.remove(msg.replyTo);
                     break;
-                case MESSAGES.GET_DEVICE_STATUS:
-                    sendMessageToClients(RESULTS.CONNECTED);
+                case MESSAGES.AUTHENTICATE_KEY:
+                    String id = (String) msg.obj;
+                    logginID = id;
+                    sendMsg(RESULTS.AUTHENTICATED);
                     break;
                 case -1:
                     throw new UnsupportedOperationException();
@@ -194,28 +165,26 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
     final Messenger mMessenger = new Messenger(new IncomingHandler());
 
-
     @Override
     public void onCreate() {
         super.onCreate();
-        // This method is invoked when the service is called.
-        Toast.makeText(this, "Service was Created", Toast.LENGTH_LONG).show();
-        //broadcaster = LocalBroadcastManager.getInstance(this);
-        //context = this.getApplicationContext();
-
+        context = getApplicationContext();
         mNM = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 
         // Display a notification about us starting.
-        startForeground(001, getNotification());
+        Notification notification = getNotification(getResources().getString(R.string.service_not_logging));
+        startForeground(NOTIFICATION_ID, notification);
     }
 
     public boolean isRunning() {
         return isRunning;
+
     }
+
 
     @Override
     public void onDestroy() {
-        Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
     }
 
     private final IBinder mBinder = new LocalBinder();
@@ -234,18 +203,45 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
 
-    public void sendMessageToClients(int message) {
+    public void sendMsg(int message, double data) {
         for (int i=mClients.size()-1; i>=0; i--) {
             try {
                 mClients.get(i).send(Message.obtain(null,
-                        message, mValue, 0));
+                        message, data));
             } catch (RemoteException e) {
-                // The client is dead.  Remove it from the list;
-                // we are going through the list from back to front
-                // so this is safe to do inside the loop.
                 mClients.remove(i);
             }
         }
+    }
+
+    public void sendMsg(int message) {
+        for (int i=mClients.size()-1; i>=0; i--) {
+            try {
+                mClients.get(i).send(Message.obtain(null,
+                        message));
+            } catch (RemoteException e) {
+                mClients.remove(i);
+            }
+        }
+    }
+
+    private boolean doConnectionConditionalSend() {
+        if (connected) {
+            return true;
+        }
+        sendMsg(RESULTS.NOT_CONNECTED);
+        return false;
+    }
+
+    private boolean doAuthenticationConditionalSend() {
+        if (doConnectionConditionalSend()) {
+            if (isAuthenticated()) {
+                return true;
+            } else {
+                sendMsg(RESULTS.NOT_AUTHENTICATED);
+            }
+        }
+        return false;
     }
 
     private void tryConnect(int timeout) {
@@ -254,49 +250,53 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
             // Initialize the Device Manager using your API key. You need to have Internet access at this point.
             deviceManager.authenticateWithAPIKey(EMPATICA_API_KEY);
-
             Handler handler = new Handler();
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if (!connected) {
                         deviceManager.cleanUp();
-                        sendMessageToClients(RESULTS.CONNECTION_TIMEOUT);
+                        sendMsg(RESULTS.CONNECTION_TIMEOUT);
                     }
                 }
             }, timeout);
         }
     }
 
-    private void setLogging(boolean shouldLogg) throws UserNotLoggedInException {
-        if (logginID != 0) {
-            if (shouldLogg) {
-                if (!isLogging) {
-                    isLogging = true;
-                    Runnable loggingTask = new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                updateStress(getStress());
-                            } catch (NoDataCollectedException e) {
-                                //
-                            }
+    private void setLogging(boolean shouldLogg) {
+        if (shouldLogg) {
+            if (!isLogging) {
+                mNM.notify(NOTIFICATION_ID, getNotification(getResources().getString(R.string.service_is_logging)));
+                isLogging = true;
+                Runnable loggingTask = new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            updateStress(getStress());
+                        } catch (NoDataCollectedException e) {
+                            //
                         }
-                    };
+                    }
+                };
 
-                    ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-                    loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.MINUTES);
-                }
-            } else {
-                isLogging = false;
-                if (loggingScheduler != null) {
-                    loggingScheduler.cancel(false);
-                }
+                ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+                loggingScheduler = executor.scheduleAtFixedRate(loggingTask, 1, LOGGING_INTERVAL_MINUTES, TimeUnit.MINUTES);
             }
         } else {
-            throw new UserNotLoggedInException();
+            isLogging = false;
+            mNM.notify(NOTIFICATION_ID, getNotification(getResources().getString(R.string.service_not_logging)));
+            if (loggingScheduler != null) {
+                loggingScheduler.cancel(false);
+            }
         }
 
+    }
+
+    private boolean isAuthenticated() {
+        if (logginID != null) {
+            return true;
+        }
+        return false;
     }
 
     private void setStress(ValueBundle v) {
@@ -305,100 +305,32 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
     private void updateStress(ValueBundle stress) {
-        if (currentStress != null) {
-            if (checkIfSupportedInterval(stress)) {
-                //TODO: fix this part, get id from user (use username as id etc)
-                /*
-                StatisticsModel model = new StatisticsModel(id, stress.value, stress.timestamp, 0);
+        if (isAuthenticated()) {
+            if (currentStress != null) {
+                if (checkIfSupportedInterval(stress)) {
+                    StatisticsModel model = new StatisticsModel(logginID, stress.value, stress.timestamp);
 
-                WorkerEventListener ev = new WorkerEventListener() {
-                    @Override
-                    public void dataRecieved(StatisticsModel model) {
-                        ValueBundle stress = new ValueBundle(model.getValue(), model.getTimestamp());
-                        setStress(stress);
-                    }
+                    WorkerEventListener ev = new WorkerEventListener() {
+                        @Override
+                        public void dataRecieved(StatisticsModel model) {
+                            System.out.println(model);
+                        }
+                    };
+
+                    StatisticsHttpWorker task = new StatisticsHttpWorker(EverCalmStatisticsEndpoint.API_URL, ev, model, StatisticsHttpWorker.SETTINGS.POST);
+                    task.execute();
                 }
-
-                StatisticsHttpWorker task = new StatisticsHttpWorker(API_URL, );
-                task.execute();
-                */
             }
             currentStress = stress;
-
-        } else {
-            //TODO: retrieve from server and set currentStress
-            throw new UnsupportedOperationException();
         }
     }
 
     private boolean checkIfSupportedInterval(final ValueBundle stress) {
         //TODO: check if last stress value is not from yesterday
+
         return true;
     }
-    /*
-    public void handleIntent(Intent intent) {
-        if (intent != null) {
-            switch (intent.getIntExtra(EMPATICA_MESSAGE_URL, -1)) {
-                case MESSAGES.START:
-                    if (deviceManager == null) {
-                        sendResult(RESULTS.NOT_CONNECTED);
-                    } else if (logginID != 0) {
-                        sendResult(RESULTS.NOT_AUTHENTICATED);
-                    } else {
-                        sendResult(RESULTS.AUTHENTICATED);
-                    }
-                    break;
-                case MESSAGES.CONNECT_TO_DEVICE:
-                    if (deviceManager != null) {
-                        sendResult(RESULTS.CONNECTION_PENDING);
-                        tryConnect(5000);
-                    } else {
-                        sendResult(RESULTS.CONNECTED);
-                        if (logginID != 0) {
-                            sendResult(RESULTS.NOT_AUTHENTICATED);
-                        }
-                    }
-                    break;
-                case MESSAGES.RETRIEVE_DATA:
-                    sendData(currentStress);
-                    //sendData(stress.get(stress.size()-1));
-                    break;
-                case MESSAGES.START_LOGGING:
-                    try {
-                        setLogging(true);
-                    } catch (UserNotLoggedInException e) {
-                        sendResult(RESULTS.NOT_AUTHENTICATED);
-                    }
-                    break;
-                case MESSAGES.END_LOGGING:
-                    try {
-                        setLogging(false);
-                    } catch (UserNotLoggedInException e) {
-                        sendResult(RESULTS.NOT_AUTHENTICATED);
-                    }
-                    break;
-                case MESSAGES.RETRIEVE_LOGGING_STATUS:
-                    if (isLogging) {
-                        sendResult(RESULTS.IS_LOGGING);
-                    } else {
-                        sendResult(RESULTS.NOT_LOGGING);
-                    }
-                    break;
-                case MESSAGES.RETRIEVE_AUTH_STATUS:
-                    if (logginID != 0) {
-                        sendResult(RESULTS.NOT_AUTHENTICATED);
-                    } else {
-                        sendResult(RESULTS.AUTHENTICATED);
-                    }
-                    break;
-                case -1:
-                    break;
-                default:
-                    throw new UnsupportedOperationException();
-            }
-        }
-    }
-    */
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
@@ -406,17 +338,18 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
         return START_STICKY; // or whatever your flag
     }
 
-    private Notification getNotification() {
-        // In this sample, we'll use the same text for the ticker and the expanded notification
-        CharSequence text = "Service is running";
+    private Notification getNotification(String text) {
+
+        Intent intent = new Intent(this, MainTabbedActivity.class);
+        PendingIntent pIntent = PendingIntent.getActivity(this, 0, intent, 0);
 
         // Set the info for the views that show in the notification panel.
         Notification notification = new Notification.Builder(this)
                 .setSmallIcon(R.drawable.notification_small)  // the status icon
                 .setTicker(text)  // the status text
-                .setWhen(System.currentTimeMillis())  // the time stamp
                 .setContentTitle("Empatica Senses")  // the label of the entry
                 .setContentText(text)  // the contents of the entry
+                .setContentIntent(pIntent)
                 .build();
 
         // Send the notification.
@@ -459,7 +392,11 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
     }
 
     @Override
-    public void didUpdateStatus(EmpaStatus empaStatus) {
+    public void didUpdateStatus(EmpaStatus status) {
+        if (status == EmpaStatus.READY) {
+            // Start scanning
+            deviceManager.startScanning();
+        }
 
     }
 
@@ -480,10 +417,10 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
                 // Connect to the device
                 deviceManager.connectDevice(bluetoothDevice);
                 connected = true;
-                sendMessageToClients(RESULTS.CONNECTED);
+                sendMsg(RESULTS.CONNECTED);
             } catch (ConnectionNotAllowedException e) {
                 // This should happen only if you try to connect when allowed == false.
-                sendMessageToClients(RESULTS.CONNECTION_FAILED);
+                sendMsg(RESULTS.CONNECTION_FAILED);
             }
         }
     }

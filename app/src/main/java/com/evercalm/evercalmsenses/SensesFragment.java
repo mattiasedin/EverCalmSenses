@@ -13,6 +13,9 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.VectorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.RemoteException;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -55,15 +58,18 @@ public class SensesFragment extends Fragment {
         return fragment;
     }
 
-    public SensesFragment() {
+    private class ConnectActivity extends ConnectedActivity {
+
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+        }
     }
 
-
-    BroadcastReceiver receiver = new BroadcastReceiver() {
+    private class IncomingHandler extends Handler {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            int resultMessage = intent.getIntExtra(EmpaticaService.EMPATICA_RESULT_URL, -1);
-            switch (resultMessage) {
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
                 case EmpaticaService.RESULTS.IS_LOGGING:
                     mySwitch.setChecked(true);
                     mySwitch.setClickable(true);
@@ -72,11 +78,23 @@ public class SensesFragment extends Fragment {
                     mySwitch.setChecked(false);
                     mySwitch.setClickable(true);
                     break;
+                case EmpaticaService.RESULTS.NOT_AUTHENTICATED:
+                    startActivity(new Intent(getContext(), LoginActivity.class));
+                    break;
+                case EmpaticaService.RESULTS.NOT_CONNECTED:
+                    startActivity(new Intent(getContext(), MainActivity.class));
+                    break;
+                case EmpaticaService.RESULTS.STRESS_DATA:
+                    //TODO: change stress level visually.
+                    break;
                 default:
+                    super.handleMessage(msg);
                     throw new UnsupportedOperationException();
             }
         }
-    };
+    }
+
+    ConnectActivity connectActivity;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -88,18 +106,39 @@ public class SensesFragment extends Fragment {
 
         //set the switch to ON
         mySwitch.setChecked(true);
-        mySwitch.setClickable(true);
+        mySwitch.setClickable(false);
         //attach a listener to check for changes in state
         mySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView,
                                          boolean isChecked) {
                 if (isChecked) {
-                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
-                    updateStressLevel((float)0.2);
+                    try {
+                        connectActivity.sendMessageToService(EmpaticaService.MESSAGES.START_LOGGING);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
                 } else {
-                    Toast.makeText(rootView.getContext(), "Not implemented yet", Toast.LENGTH_SHORT).show();
-                    updateStressLevel((float)0.3);
+                    try {
+                        connectActivity.sendMessageToService(EmpaticaService.MESSAGES.END_LOGGING);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        });
+        connectActivity = new ConnectActivity();
+        connectActivity.setHandler(new IncomingHandler());
+        connectActivity.setContext(rootView.getContext());
+        connectActivity.setConnectionCallback(new ConnectionActivityCallbackListener() {
+            @Override
+            public void callbackPerformed() {
+                try {
+                    connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
+                    connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_DATA);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -149,11 +188,19 @@ public class SensesFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
+        connectActivity.doBindService();
+        /*
+        try {
+            connectActivity.sendMessageToService(EmpaticaService.MESSAGES.RETRIEVE_LOGGING_STATUS);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        */
     }
 
     @Override
     public void onPause() {
+        connectActivity.doUnbindService();
         super.onStop();
     }
 
