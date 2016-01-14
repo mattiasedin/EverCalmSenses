@@ -17,7 +17,7 @@
     <string-array name="t1_items">
         <item>
             Visste du att sömn kan påverka stress?
-            För mycket sömn kan också vara påverka stressnivån.
+            För mycket sömn kan också påverka stressnivån.
         </item>
         <item>
             Sitt inte framför datorn eller med mobiltelefonen
@@ -30,9 +30,8 @@
         <item>
             Sätt dig ner, blunda och ta tre djupa andetag.
         </item>
-            Släpp tankarna från arbete.
         <item>
-
+            Släpp tankarna från skola och arbete.
         </item>
     </string-array>
 
@@ -42,6 +41,10 @@
             kommer klockan gå in i Offline-läget och fortsätta
             samla data i 36 timmar. All data synkroniseras när
             anslutningen återupptas.
+        </item>
+        <item>
+            Du kan utläsa mer information kring din stressdata
+            i vår webbtjänst.
         </item>
     </string-array>
     <string name="title_activity_login">Sign in</string>
