@@ -15,6 +15,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
+import android.widget.Toast;
 
 import com.empatica.empalink.ConnectionNotAllowedException;
 import com.empatica.empalink.EmpaDeviceManager;
@@ -183,13 +184,15 @@ public class EmpaticaService extends Service implements EmpaDataDelegate, EmpaSt
 
     @Override
     public void onDestroy() {
-        //Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
+        if (loggingScheduler != null) {
+            loggingScheduler.cancel(false);
+        }
+        Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
     }
 
 
     public void onAuthentication() {
         WorkerEventListener ev = new WorkerEventListener() {
-            StatisticsIdentification model = new StatisticsIdentification(logginID);
             @Override
             public void dataRecieved(StatisticsModel model) {
                 if (model != null) {
