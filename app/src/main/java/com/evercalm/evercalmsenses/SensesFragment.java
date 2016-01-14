@@ -85,7 +85,8 @@ public class SensesFragment extends Fragment {
                     startActivity(new Intent(getContext(), MainActivity.class));
                     break;
                 case EmpaticaService.RESULTS.STRESS_DATA:
-                    //TODO: change stress level visually.
+                    Double stressData = (double) msg.obj;
+                    updateStressLevel(stressData.floatValue());
                     break;
                 default:
                     super.handleMessage(msg);
@@ -160,6 +161,30 @@ public class SensesFragment extends Fragment {
         currentValue = MIN_VALUE;
     }
 
+    /**
+     * Update visual stress level
+     * @param change the change in stress (+/-)
+     */
+    public void setStressLevel(float value){
+        float scaledValue = value * MULTIPLIER;
+        float newValue = currentValue + scaledValue;
+
+        // Check value not out of bounds
+        if((newValue <=  MAX_VALUE) && (newValue >= MIN_VALUE)){
+            ImageView vectorImage = (ImageView) rootView.findViewById(R.id.vector_image_content);
+            ViewPropertyAnimator animator = vectorImage.animate().translationYBy(-scaledValue);
+
+            currentValue = newValue;
+
+            if(currentValue > HIGH_THRESHOLD){
+                vectorImage.setBackgroundColor(Color.RED);
+            }else if(currentValue > MID_THRESHOLD){
+                vectorImage.setBackgroundColor(Color.YELLOW);
+            }else {
+                vectorImage.setBackgroundColor(Color.GREEN);
+            }
+        }
+    }
     /**
      * Update visual stress level
      * @param change the change in stress (+/-)
