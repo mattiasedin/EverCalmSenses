@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="@dimen/start_horizontal_margin"
+    android:paddingRight="@dimen/start_horizontal_margin"
+    android:paddingTop="@dimen/start_vertical_margin"
+    android:paddingBottom="@dimen/start_vertical_margin"
+    tools:context=".MainActivity">
+    <ImageView
+        android:background="@drawable/backgroundradial"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="EverCalm Senses™"
+            android:id="@+id/textView"
+            android:layout_alignParentStart="true"
+            android:layout_marginTop="50dp"
+            android:textColor="@color/abc_primary_text_material_dark" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/textView"
+            android:layout_alignStart="@id/textView"
+            android:layout_alignEnd="@id/textView"
+            android:text="Live a calmer life"
+            android:textAlignment="center"
+            android:textColor="@color/abc_primary_text_material_dark" />
+
+    </RelativeLayout>
+
+    <LinearLayout android:id="@+id/email_login_form"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="center"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin">
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/layout_bg"
+            android:padding="5dp">
+
+            <AutoCompleteTextView android:id="@+id/email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="@string/prompt_email"
+                android:inputType="textEmailAddress" android:maxLines="1"
+                android:text="admin@admin.com"
+                android:singleLine="true" />
+
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/layout_bg"
+            android:padding="5dp">
+
+            <EditText android:id="@+id/password" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:hint="@string/prompt_password"
+                android:imeActionId="@+id/login"
+                android:imeActionLabel="@string/action_sign_in_short"
+                android:imeOptions="actionUnspecified" android:inputType="textPassword"
+                android:maxLines="1" android:singleLine="true" />
+
+        </android.support.design.widget.TextInputLayout>
+
+        <Button android:id="@+id/email_sign_in_button" style="?android:textAppearanceSmall"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="@string/action_sign_in"
+            android:textStyle="bold"
+            android:background="@color/colorPrimaryDark"
+            android:elevation="10dp"/>
+
+    </LinearLayout>
+
+    <ProgressBar android:id="@+id/login_progress" style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        android:layout_gravity="center_horizontal|center"
+        android:elevation="20dp"/>
+</FrameLayout>
